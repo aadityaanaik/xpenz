@@ -2,5 +2,6 @@
 emails.json
 email_fetch.log
 transactions.json
-venv/
 config.py
+
+venv/
