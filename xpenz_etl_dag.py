@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.bash import BashOperator
+from airflow.providers.standard.operators.bash import BashOperator
 from datetime import datetime, timedelta
 
 default_args = {
@@ -9,17 +9,17 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-dag = DAG(
-    'xpenz_etl_dag',
+with DAG(
+    dag_id='xpenz_etl_bash_dag',
     default_args=default_args,
-    description='Run my main Python script using Airflow',
-    schedule_interval='0 0 * * *',  # or '0 10 * * *' for 10 AM daily
-    start_date=datetime(2025, 6, 15),
+    description='Run xpenz pipeline using BashOperator',
+    schedule='0 0 * * *',
+    start_date=datetime(2025, 6, 14),
     catchup=False,
-)
+    tags={'xpenz'},
+) as dag:
 
-run_script = BashOperator(
-    task_id='xpenz_etl',
-    bash_command='python3 /mnt/d/App/repository/xpenz/main.py',
-    dag=dag,
-)
+    run_task = BashOperator(
+        task_id='xpenz_etl_main',
+        bash_command='python3 /mnt/d/App/repository/xpenz/main.py',
+    )
