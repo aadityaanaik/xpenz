@@ -16,7 +16,7 @@ with DAG(
     schedule='0 0 * * *',
     start_date=datetime(2025, 6, 14),
     catchup=False,
-    tags={'xpenz'},
+    tags=['xpenz'],
 ) as dag:
 
     run_task = BashOperator(
