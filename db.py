@@ -35,6 +35,7 @@ def insert_transactions(data, dbname, user, password, host, port):
         query = """
             INSERT INTO transactions (datetime, amount, merchant, type)
             VALUES %s
+            ON CONFLICT ON CONSTRAINT unique_transaction_entry DO NOTHING
         """
 
         values = [
