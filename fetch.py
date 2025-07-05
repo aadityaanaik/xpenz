@@ -4,6 +4,7 @@ import json
 import imaplib
 import email
 import logging
+from llama import categorize
 from email.header import decode_header
 from pprint import pprint
 
@@ -18,15 +19,17 @@ def filter_json(path):
     with open("emails.json", "r", encoding="utf-8") as f:
         contents = json.load(f)
     for content in contents:
+        merchant_name = get_merchant(content)
         item = {
             "datetime": content['timestamp'],
             "amount": get_amt(content),
-            "merchant": get_merchant(content),
+            "merchant": merchant_name,
+            "category": categorize(merchant_name),
             "type": get_type(content)
         }
         if all(item.values()):  # filters out if any value is None or empty string
             data.append(item)
-    pprint(data)
+    # pprint(data)
     save_file("transactions.json", data)
 
 def get_amt(s):
@@ -76,6 +79,7 @@ def fetch_emails(username, password, sender_email):
     imap.select("inbox")
     yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')  # e.g., '15-Jun-2025'
     search_criteria = f'(FROM "{sender_email}" SINCE {yesterday})'
+    # search_criteria = f'(FROM "{sender_email}")'
     status, messages = imap.search(None, search_criteria)
 
     email_list = []

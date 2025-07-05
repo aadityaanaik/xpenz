@@ -33,7 +33,7 @@ def insert_transactions(data, dbname, user, password, host, port):
         cur = conn.cursor()
 
         query = """
-            INSERT INTO transactions (datetime, amount, merchant, type)
+            INSERT INTO transactions (datetime, amount, merchant, category, type)
             VALUES %s
             ON CONFLICT ON CONSTRAINT unique_transaction_entry DO NOTHING
         """
@@ -43,6 +43,7 @@ def insert_transactions(data, dbname, user, password, host, port):
                 record["datetime"],
                 float(record["amount"]),
                 record["merchant"],
+                record["category"],
                 record["type"]
             )
             for record in data
