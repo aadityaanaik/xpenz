@@ -1,6 +1,15 @@
 import requests
+import logging
+from config import LLAMA_CONFIG
 
-OLLAMA_URL = "http://10.0.0.112:11434/api/generate"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+LLAMA_HOST = LLAMA_CONFIG["LLAMA_HOST"]
+LLAMA_PORT = LLAMA_CONFIG["LLAMA_PORT"]
+
+LLAMA_URL = f"http://{LLAMA_HOST}:{LLAMA_PORT}/api/generate"
 
 def categorize(merchant_name: str) -> str:
     prompt = f"""
@@ -36,10 +45,10 @@ Now categorize: {merchant_name} and only give me the category name and nothing e
     }
 
     try:
-        response = requests.post(OLLAMA_URL, json=payload)
+        response = requests.post(LLAMA_URL, json=payload)
         response.raise_for_status()
         result = response.json()
         return result.get("response", "").strip()
     except requests.RequestException as e:
-        print(f"Error communicating with Ollama: {e}")
+        logging.error(f"Error communicating with LLAMA: {e}")
         return "Unknown"
