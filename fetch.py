@@ -6,7 +6,7 @@ import email
 import logging
 from llama import categorize
 from email.header import decode_header
-from pprint import pprint
+from config_loader import email_id, email_pass, senders
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -16,7 +16,7 @@ def save_file(path,data):
 
 def filter_json(path):
     data = []
-    with open("emails.json", "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         contents = json.load(f)
     for content in contents:
         merchant_name = get_merchant(content)
@@ -41,7 +41,7 @@ def get_type(s):
         return "credit"
     if "transaction was charged" in s['subject']:
         return "debit"
-    return None
+    return "debit"
 
 def get_merchant(s):
     match = None
@@ -65,12 +65,31 @@ def clean(text):
             result += part
     return result.strip()
 
-def fetch_emails(username, password, sender_email):
+def get_search_criteria(senders_array=None, since_date=None):
+    if not senders_array:
+        return f'(SINCE {since_date})'
+
+    if not since_date:
+        criteria = f'(FROM "{senders_array[-1]}")'
+        for sender in reversed(senders_array[:-1]):
+            criteria = f'(OR (FROM "{sender}") {criteria})'
+        return f'(SINCE {since_date})'
+
+    # Start with the last sender
+    criteria = f'(FROM "{senders_array[-1]}" SINCE {since_date})'
+
+    # Nest ORs backwards
+    for sender in reversed(senders_array[:-1]):
+        criteria = f'(OR (FROM "{sender}" SINCE {since_date}) {criteria})'
+
+    return criteria
+
+def fetch_emails(password, sender_email):
     logging.info("Connecting to Gmail IMAP server...")
     imap = imaplib.IMAP4_SSL("imap.gmail.com")
 
     try:
-        imap.login(username, password)
+        imap.login(email_id, email_pass)
         logging.info("Logged in successfully.")
     except imaplib.IMAP4.error as e:
         logging.error(f"Login failed: {e}")
@@ -78,8 +97,7 @@ def fetch_emails(username, password, sender_email):
 
     imap.select("inbox")
     yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')  # e.g., '15-Jun-2025'
-    search_criteria = f'(FROM "{sender_email}" SINCE {yesterday})'
-    # search_criteria = f'(FROM "{sender_email}")'
+    search_criteria = get_search_criteria(senders, yesterday)
     status, messages = imap.search(None, search_criteria)
 
     email_list = []

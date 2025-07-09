@@ -1,15 +1,14 @@
 import requests
 import logging
-from config import LLAMA_CONFIG
+from config_loader import llama_host,llama_port
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
-LLAMA_HOST = LLAMA_CONFIG["LLAMA_HOST"]
-LLAMA_PORT = LLAMA_CONFIG["LLAMA_PORT"]
 
-LLAMA_URL = f"http://{LLAMA_HOST}:{LLAMA_PORT}/api/generate"
+LLAMA_URL = f"http://{llama_host}:{llama_port}/api/generate"
+logging.info("Running LLAMA URL: {}".format(LLAMA_URL))
 
 def categorize(merchant_name: str) -> str:
     prompt = f"""
@@ -46,9 +45,16 @@ Now categorize: {merchant_name} and only give me the category name and nothing e
 
     try:
         response = requests.post(LLAMA_URL, json=payload)
+        print("Response from LLAMA: {}".format(response.text))
         response.raise_for_status()
         result = response.json()
         return result.get("response", "").strip()
     except requests.RequestException as e:
         logging.error(f"Error communicating with LLAMA: {e}")
         return "Unknown"
+
+# if __name__ == "__main__":
+#     merchants = ["APPLE","MAYURI FOODS", "STONE KOREAN RESTAURANT", "TEMU.COM"]
+#     for m in merchants:
+#         category = categorize(m)
+#         print(f"{m} -> {category}")

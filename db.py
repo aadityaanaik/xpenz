@@ -3,8 +3,8 @@ import psycopg2
 from psycopg2.extras import execute_values
 import json
 import logging
+from config_loader import db_name,db_user,db_pass,db_host,db_port
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
@@ -63,12 +63,12 @@ def insert_transactions(data, dbname, user, password, host, port):
             conn.close()
             logging.info("Database connection closed.")
 
-def json2db(file_name, dbname, user, password, host, port):
+def json2db(file_name):
     try:
         with open(file_name, "r") as f:
             data = json.load(f)
             logging.info(f"Loaded {len(data)} records from {file_name}.")
-        insert_transactions(data, dbname, user, password, host, port)
+        insert_transactions(data, db_name, db_user, db_pass, db_host, db_port)
     except FileNotFoundError:
         logging.error(f"File not found: {file_name}")
     except json.JSONDecodeError as e:
