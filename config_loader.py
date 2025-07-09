@@ -20,6 +20,10 @@ db_port = config['DB_CONFIG']['DBPORT']
 llama_host = config['LLAMA_CONFIG']['LLAMA_HOST']
 llama_port = config['LLAMA_CONFIG']['LLAMA_PORT']
 
+# Access FILE_CONFIG
+email_file = config['EMAIL_CONFIG']['EMAIL_FILE']
+transactions_file = config['TRANSACTIONS_CONFIG']['TRANSACTIONS_FILE']
+
 # Example usage
 print(f"Connecting to DB at {db_host}:{db_port} as {db_user}")
 print(f"LLaMA running at {llama_host}:{llama_port}")

@@ -1,7 +1,6 @@
 .idea
-emails.json
-email_fetch.log
-transactions.json
-config.json
-
+logs/
+data/
 venv/
+
+config.json

@@ -14,9 +14,10 @@ def save_file(path,data):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def filter_json(path):
+def save_transactions(email_path, transactions_path):
+    save_emails(email_path)
     data = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(email_path, "r", encoding="utf-8") as f:
         contents = json.load(f)
     for content in contents:
         merchant_name = get_merchant(content)
@@ -29,8 +30,8 @@ def filter_json(path):
         }
         if all(item.values()):  # filters out if any value is None or empty string
             data.append(item)
-    # pprint(data)
-    save_file("transactions.json", data)
+    save_file(transactions_path, data)
+    return transactions_path
 
 def get_amt(s):
     match = re.search(r'\$(\S+)', s['body'])
@@ -84,7 +85,7 @@ def get_search_criteria(senders_array=None, since_date=None):
 
     return criteria
 
-def fetch_emails(password, sender_email):
+def save_emails(path):
     logging.info("Connecting to Gmail IMAP server...")
     imap = imaplib.IMAP4_SSL("imap.gmail.com")
 
@@ -145,5 +146,5 @@ def fetch_emails(password, sender_email):
 
     imap.logout()
     logging.info(f"Fetched {len(email_list)} emails.")
-    save_file("emails.json", email_list)
+    save_file(path, email_list)
     return None
