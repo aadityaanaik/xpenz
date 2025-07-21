@@ -28,7 +28,7 @@ def save_transactions(email_path, transactions_path):
             "category": categorize(merchant_name),
             "type": get_type(content)
         }
-        if all(item.values()):  # filters out if any value is None or empty string
+        if all(item.values()):
             data.append(item)
     save_file(transactions_path, data)
     return transactions_path
@@ -74,7 +74,7 @@ def get_search_criteria(senders_array=None, since_date=None):
         criteria = f'(FROM "{senders_array[-1]}")'
         for sender in reversed(senders_array[:-1]):
             criteria = f'(OR (FROM "{sender}") {criteria})'
-        return f'(SINCE {since_date})'
+        return criteria
 
     # Start with the last sender
     criteria = f'(FROM "{senders_array[-1]}" SINCE {since_date})'
