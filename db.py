@@ -1,9 +1,11 @@
 # db.py
+from pprint import pprint
+
 import psycopg2
 from psycopg2.extras import execute_values
 import json
 import logging
-from config_loader import db_name,db_user,db_pass,db_host,db_port
+from config_loader import db_name,db_user,db_pass,db_host,db_port, sql_insert_txn
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,36 +28,28 @@ def get_connection(dbname, user, password, host, port):
         logging.error(f"Failed to connect to the database: {e}")
         raise
 
-def insert_transactions(data, dbname, user, password, host, port):
+def insert_transactions(record, dbname, user, password, host, port):
     conn = None
     try:
         conn = get_connection(dbname, user, password, host, port)
         cur = conn.cursor()
-
-        query = """
-            INSERT INTO transactions (datetime, amount, merchant, category, type)
-            VALUES %s
-            ON CONFLICT ON CONSTRAINT unique_transaction_entry DO NOTHING
-        """
-
-        values = [
-            (
+        query = sql_insert_txn
+        # for record in data:
+        values = (
                 record["datetime"],
-                float(record["amount"]),
+                record["amount"],
                 record["merchant"],
+                record["card"],
                 record["category"],
                 record["type"]
             )
-            for record in data
-        ]
-
-        execute_values(cur, query, values)
+        pprint(values)
+        cur.execute(query, values)
+        logging.info(f"Inserted transaction into the database.")
         conn.commit()
-        logging.info(f"Inserted {len(values)} transactions into the database.")
-
         cur.close()
     except Exception as e:
-        logging.error(f"Error inserting transactions: {e}")
+        logging.error(f"Error inserting record: {record}\n {e}")
         if conn:
             conn.rollback()
     finally:
@@ -63,15 +57,12 @@ def insert_transactions(data, dbname, user, password, host, port):
             conn.close()
             logging.info("Database connection closed.")
 
-def json2db(file_name):
+def record_to_db(record):
+    logging.info(f"Inserting {record} into {db_name}")
     try:
-        with open(file_name, "r") as f:
-            data = json.load(f)
-            logging.info(f"Loaded {len(data)} records from {file_name}.")
-        insert_transactions(data, db_name, db_user, db_pass, db_host, db_port)
-    except FileNotFoundError:
-        logging.error(f"File not found: {file_name}")
-    except json.JSONDecodeError as e:
-        logging.error(f"Error parsing JSON file: {e}")
+        # with open(file_name, "r") as f:
+        #     data = json.load(f)
+        #     logging.info(f"Loaded {len(data)} records from {file_name}.")
+        insert_transactions(record, db_name, db_user, db_pass, db_host, db_port)
     except Exception as e:
         logging.error(f"Unexpected error: {e}")

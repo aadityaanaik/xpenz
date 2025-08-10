@@ -6,8 +6,8 @@ with open('config.json', 'r') as f:
 
 # Access EMAIL_CONFIG
 email_id = config['EMAIL_CONFIG']['EMAIL']
-email_pass = config['EMAIL_CONFIG']['EMAILPASS']
-senders = config['EMAIL_CONFIG']['SENDER']
+email_pass = config['EMAIL_CONFIG']['EMAIL_PASS']
+senders_config = config['EMAIL_CONFIG']['SENDER']
 
 # Access DB_CONFIG
 db_host = config['DB_CONFIG']['DBHOST']
@@ -21,9 +21,14 @@ llama_host = config['LLAMA_CONFIG']['LLAMA_HOST']
 llama_port = config['LLAMA_CONFIG']['LLAMA_PORT']
 
 # Access FILE_CONFIG
-email_file = config['EMAIL_CONFIG']['EMAIL_FILE']
-transactions_file = config['TRANSACTIONS_CONFIG']['TRANSACTIONS_FILE']
+email_file = config['FILE_CONFIG']['EMAIL_FILE']
+transactions_file = config['FILE_CONFIG']['TRANSACTIONS_FILE']
 
-# Example usage
+# Access PROMPTS_CONFIG
+prompt_email_info = config['PROMPT_CONFIG']['EMAIL_INFO']
+
+# Access QUERY_CONFIG
+sql_insert_txn = config['QUERY_CONFIG']['INSERT_TXN']
+
 print(f"Connecting to DB at {db_host}:{db_port} as {db_user}")
 print(f"LLaMA running at {llama_host}:{llama_port}")

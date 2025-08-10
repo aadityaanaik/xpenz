@@ -4,9 +4,13 @@ import json
 import imaplib
 import email
 import logging
-from llama import categorize
+
+from db import record_to_db
+from llama import get_info
 from email.header import decode_header
-from config_loader import email_id, email_pass, senders
+from config_loader import email_id, email_pass, senders_config
+from pprint import pprint
+from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -14,46 +18,19 @@ def save_file(path,data):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def save_transactions(email_path, transactions_path):
-    save_emails(email_path)
-    data = []
-    with open(email_path, "r", encoding="utf-8") as f:
-        contents = json.load(f)
-    for content in contents:
-        merchant_name = get_merchant(content)
-        item = {
-            "datetime": content['timestamp'],
-            "amount": get_amt(content),
-            "merchant": merchant_name,
-            "category": categorize(merchant_name),
-            "type": get_type(content)
-        }
-        if all(item.values()):
-            data.append(item)
-    save_file(transactions_path, data)
-    return transactions_path
-
-def get_amt(s):
-    match = re.search(r'\$(\S+)', s['body'])
-    return match.group(1) if match else None
-
-def get_type(s):
-    if "have a credit" in s['subject']:
-        return "credit"
-    if "transaction was charged" in s['subject']:
-        return "debit"
-    return "debit"
-
-def get_merchant(s):
-    match = None
-    if(get_type(s) == "debit"):
-        match = re.search(r'\bat (.*?) #', s['body'])
-        if not match:
-            match = re.search(r'\bat (.*?)(?:,|$)', s['body'])
-    elif(get_type(s) == "credit"):
-        match = re.search(r'\bfrom (.*?)(?:,|$)', s['subject'])
-
-    return match.group(1) if match else None
+def email_to_record(emails):
+    for email in emails:
+        body = email["body"]
+        subject = email["subject"]
+        logging.info(f"Processing email via LLAMA: {email}")
+        item=json.loads(get_info(subject ,body))
+        logging.info("Email processed successfully!")
+        try:
+            record_to_db(item)
+        except Exception as e:
+            logging.error(e)
+            return 1
+    return 0
 
 def clean(text):
     """Decode and clean header values."""
@@ -66,26 +43,34 @@ def clean(text):
             result += part
     return result.strip()
 
-def get_search_criteria(senders_array=None, since_date=None):
-    if not senders_array:
-        return f'(SINCE {since_date})'
 
-    if not since_date:
-        criteria = f'(FROM "{senders_array[-1]}")'
-        for sender in reversed(senders_array[:-1]):
-            criteria = f'(OR (FROM "{sender}") {criteria})'
-        return criteria
+def get_search_criteria(senders_config, since_date):
+    pair_criteria = [
+        f'(FROM "{sender}" SUBJECT "{details["subject"]}")'
+        for sender, details in senders_config.items()
+    ]
 
-    # Start with the last sender
-    criteria = f'(FROM "{senders_array[-1]}" SINCE {since_date})'
+    if not pair_criteria:
+        return ""  # No valid criteria to build a query from
 
-    # Nest ORs backwards
-    for sender in reversed(senders_array[:-1]):
-        criteria = f'(OR (FROM "{sender}" SINCE {since_date}) {criteria})'
+    # If there's only one sender-subject pair, we don't need to use OR
+    if len(pair_criteria) == 1:
+        combined_criteria = pair_criteria[0]
+    else:
+        # For multiple pairs, build a nested OR structure like:
+        # (OR <pair1> (OR <pair2> <pair3>))
+        combined_criteria = pair_criteria[-1]
+        for criterion in reversed(pair_criteria[:-1]):
+            combined_criteria = f'(OR {criterion} {combined_criteria})'
 
-    return criteria
+    # The final query combines the sender/subject logic with the date
+    final_query_parts = [combined_criteria]
+    if since_date:
+        final_query_parts.append(f'SINCE {since_date}')
 
-def save_emails(path):
+    return ' '.join(final_query_parts)
+
+def get_emails():
     logging.info("Connecting to Gmail IMAP server...")
     imap = imaplib.IMAP4_SSL("imap.gmail.com")
 
@@ -98,7 +83,7 @@ def save_emails(path):
 
     imap.select("inbox")
     yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')  # e.g., '15-Jun-2025'
-    search_criteria = get_search_criteria(senders, yesterday)
+    search_criteria = get_search_criteria(senders_config, None)
     status, messages = imap.search(None, search_criteria)
 
     email_list = []
@@ -115,8 +100,10 @@ def save_emails(path):
         raw_email = msg_data[0][1]
         msg = email.message_from_bytes(raw_email)
 
+        sender = msg['From']
         subject = clean(msg["Subject"] or "")
         date_str = msg["Date"]
+
         try:
             date_obj = email.utils.parsedate_to_datetime(date_str)
             timestamp = date_obj.isoformat()
@@ -138,13 +125,21 @@ def save_emails(path):
             if body_bytes:
                 body = body_bytes.decode(msg.get_content_charset() or 'utf-8', errors='ignore')
 
+        soup = BeautifulSoup(body, "lxml")
+        text_with_spaces = soup.get_text(separator=" ", strip=True)
+        lines = (line.strip() for line in text_with_spaces.splitlines())
+        clean_body = '\n'.join(line for line in lines if line)
+        clean_body = clean_body.replace('\u200c', '').replace('\xa0', ' ')
+
         email_list.append({
             "timestamp": timestamp,
+            "sender": sender,
             "subject": subject,
-            "body": body.strip()
+            "body": clean_body.strip()
         })
 
     imap.logout()
     logging.info(f"Fetched {len(email_list)} emails.")
-    save_file(path, email_list)
-    return None
+
+    # save_file(path, email_list)
+    return email_list
