@@ -60,9 +60,6 @@ def insert_transactions(record, dbname, user, password, host, port):
 def record_to_db(record):
     logging.info(f"Inserting {record} into {db_name}")
     try:
-        # with open(file_name, "r") as f:
-        #     data = json.load(f)
-        #     logging.info(f"Loaded {len(data)} records from {file_name}.")
         insert_transactions(record, db_name, db_user, db_pass, db_host, db_port)
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
