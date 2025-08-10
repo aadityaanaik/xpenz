@@ -21,5 +21,5 @@ with DAG(
 
     run_task = BashOperator(
         task_id='xpenz_etl_main',
-        bash_command='/mnt/d/App/devenv_p3_11/bin/python3 /mnt/d/App/repository/xpenz/main.py',
+        bash_command='cd /mnt/d/App/repository/xpenz && /mnt/d/App/devenv_p3_11/bin/python3 main.py',
     )
