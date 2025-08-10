@@ -1,9 +1,6 @@
 # db.py
-from pprint import pprint
 
 import psycopg2
-from psycopg2.extras import execute_values
-import json
 import logging
 from config_loader import db_name,db_user,db_pass,db_host,db_port, sql_insert_txn
 
@@ -43,7 +40,6 @@ def insert_transactions(record, dbname, user, password, host, port):
                 record["category"],
                 record["type"]
             )
-        pprint(values)
         cur.execute(query, values)
         logging.info(f"Inserted transaction into the database.")
         conn.commit()

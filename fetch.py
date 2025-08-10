@@ -9,7 +9,6 @@ from db import record_to_db
 from llama import get_info
 from email.header import decode_header
 from config_loader import email_id, email_pass, senders_config
-from pprint import pprint
 from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
