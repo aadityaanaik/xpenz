@@ -21,7 +21,7 @@ def email_to_record(emails):
     for email in emails:
         body = email["body"]
         subject = email["subject"]
-        ts = email["date"]
+        ts = email["timestamp"]
         logging.info(f"Processing email via LLAMA: {email}")
         item=json.loads(get_info(subject ,body, ts))
         logging.info("Email processed successfully!")
