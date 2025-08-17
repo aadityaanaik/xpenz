@@ -21,8 +21,9 @@ def email_to_record(emails):
     for email in emails:
         body = email["body"]
         subject = email["subject"]
+        ts = email["date"]
         logging.info(f"Processing email via LLAMA: {email}")
-        item=json.loads(get_info(subject ,body))
+        item=json.loads(get_info(subject ,body, ts))
         logging.info("Email processed successfully!")
         try:
             record_to_db(item)
@@ -81,8 +82,8 @@ def get_emails():
         return []
 
     imap.select("inbox")
-    yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')  # e.g., '15-Jun-2025'
-    search_criteria = get_search_criteria(senders_config, yesterday)
+    # yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')  # e.g., '15-Jun-2025'
+    search_criteria = get_search_criteria(senders_config, None)
     status, messages = imap.search(None, search_criteria)
 
     email_list = []

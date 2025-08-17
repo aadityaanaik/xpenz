@@ -9,10 +9,11 @@ logging.basicConfig(
 
 LLAMA_URL = f"http://{llama_host}:{llama_port}/api/generate"
 
-def get_info(subject, body) -> str:
+def get_info(subject, body, ts) -> str:
     prompt = prompt_email_info.format(
     email_subject=subject,
-    email_body=body)
+    email_body=body,
+    ts = ts)
 
     payload = {
         "model": "llama3",
