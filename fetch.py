@@ -22,9 +22,13 @@ def email_to_record(emails):
         body = email["body"]
         subject = email["subject"]
         ts = email["timestamp"]
+        sender = email["sender"]
         logging.info(f"Processing email via LLAMA: {email}")
-        item=json.loads(get_info(subject ,body, ts))
+        item=json.loads(get_info(subject ,body))
+
         logging.info("Email processed successfully!")
+        item['timestamp'] = ts
+        item['card'] = senders_config[sender]['card']
         try:
             record_to_db(item)
         except Exception as e:

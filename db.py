@@ -37,7 +37,6 @@ def insert_transactions(record, dbname, user, password, host, port):
                 record["amount"],
                 record["merchant"],
                 record["card"],
-                record["category"],
                 record["type"]
             )
         cur.execute(query, values)
