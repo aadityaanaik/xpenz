@@ -30,16 +30,7 @@ def insert_transactions(record, dbname, user, password, host, port):
     try:
         conn = get_connection(dbname, user, password, host, port)
         cur = conn.cursor()
-        query = sql_insert_txn
-        # for record in data:
-        values = (
-                record["datetime"],
-                record["amount"],
-                record["merchant"],
-                record["card"],
-                record["type"]
-            )
-        cur.execute(query, values)
+        cur.execute(sql_insert_txn, record)
         logging.info(f"Inserted transaction into the database.")
         conn.commit()
         cur.close()

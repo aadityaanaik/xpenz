@@ -21,14 +21,14 @@ def email_to_record(emails):
     for email in emails:
         body = email["body"]
         subject = email["subject"]
-        ts = email["timestamp"]
-        sender = email["sender"]
+        sender = re.search(r'<([^>]+)>', email["sender"]).group(1).lower()
         logging.info(f"Processing email via LLAMA: {email}")
         item=json.loads(get_info(subject ,body))
-
         logging.info("Email processed successfully!")
-        item['timestamp'] = ts
+
+        item['datetime'] = email["timestamp"]
         item['card'] = senders_config[sender]['card']
+        print(item)
         try:
             record_to_db(item)
         except Exception as e:
@@ -57,12 +57,9 @@ def get_search_criteria(senders_config, since_date):
     if not pair_criteria:
         return ""  # No valid criteria to build a query from
 
-    # If there's only one sender-subject pair, we don't need to use OR
     if len(pair_criteria) == 1:
         combined_criteria = pair_criteria[0]
     else:
-        # For multiple pairs, build a nested OR structure like:
-        # (OR <pair1> (OR <pair2> <pair3>))
         combined_criteria = pair_criteria[-1]
         for criterion in reversed(pair_criteria[:-1]):
             combined_criteria = f'(OR {criterion} {combined_criteria})'
@@ -86,8 +83,8 @@ def get_emails():
         return []
 
     imap.select("inbox")
-    # yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')  # e.g., '15-Jun-2025'
-    search_criteria = get_search_criteria(senders_config, None)
+    yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')  # e.g., '15-Jun-2025'
+    search_criteria = get_search_criteria(senders_config, yesterday)
     status, messages = imap.search(None, search_criteria)
 
     email_list = []

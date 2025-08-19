@@ -28,9 +28,3 @@ def get_info(subject, body) -> str:
     except requests.RequestException as e:
         logging.error(f"Error communicating with LLAMA: {e}")
         return "{}"
-
-# if __name__ == "__main__":
-#     m='''
-#
-#     '''
-#     print(get_info(m))
