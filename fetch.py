@@ -83,8 +83,9 @@ def get_emails():
         return []
 
     imap.select("inbox")
-    yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')
+    # yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')
     search_criteria = get_search_criteria(senders_config, yesterday)
+    search_criteria = get_search_criteria(senders_config, None)
     status, messages = imap.search(None, search_criteria)
 
     email_list = []
