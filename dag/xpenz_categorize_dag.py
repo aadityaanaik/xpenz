@@ -20,6 +20,6 @@ with DAG(
     tags=['xpenz','categorize'],
 ) as dag:
     run_task = BashOperator(
-        task_id='xpenz_etl_main',
+        task_id='xpenz_categorize',
         bash_command='cd /mnt/d/App/repository/xpenz && /mnt/d/App/devenv_p3_11/bin/python3 categorize.py',
     )
