@@ -5,6 +5,7 @@ import email
 import logging
 
 from db import record_to_db, get_latest_date
+from datetime import date, timedelta
 from llama import get_info
 from email.header import decode_header
 from config_loader import email_id, email_pass, senders_config, db_name, db_user, db_pass, db_host, db_port
@@ -83,6 +84,8 @@ def get_emails():
 
     imap.select("inbox")
     latest_date = get_latest_date(db_name, db_user, db_pass, db_host, db_port)
+    # yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')
+    logging.error(f"Latest Date: {latest_date}")
     search_criteria = get_search_criteria(senders_config, latest_date)
     status, messages = imap.search(None, search_criteria)
 
@@ -141,5 +144,4 @@ def get_emails():
     imap.logout()
     logging.info(f"Fetched {len(email_list)} emails.")
 
-    # save_file(path, email_list)
     return email_list

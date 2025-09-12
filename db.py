@@ -3,6 +3,7 @@
 import psycopg2
 import logging
 from config_loader import db_name,db_user,db_pass,db_host,db_port, sql_insert_txn, sql_latest_date
+from datetime import datetime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,7 +63,7 @@ def get_latest_date(dbname, user, password, host, port):
                 record = cur.fetchone()  # Fetches the first row of the result
 
                 if record:
-                    latest_date = str(record[0])  # The actual value is the first item in the tuple
+                    latest_date = datetime.strptime(str(record[0]), '%Y-%m-%d').strftime('%d-%b-%Y')
                     logging.info(f"Successfully extracted latest date: {latest_date}")
 
     except Exception as e:
