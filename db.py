@@ -2,7 +2,7 @@
 
 import psycopg2
 import logging
-from config_loader import db_name,db_user,db_pass,db_host,db_port, sql_insert_txn
+from config_loader import db_name,db_user,db_pass,db_host,db_port, sql_insert_txn, sql_latest_date
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,3 +49,23 @@ def record_to_db(record):
         insert_transactions(record, db_name, db_user, db_pass, db_host, db_port)
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
+
+
+def get_latest_date(dbname, user, password, host, port):
+
+    latest_date = None
+    try:
+        with get_connection(dbname, user, password, host, port) as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql_latest_date)
+
+                record = cur.fetchone()  # Fetches the first row of the result
+
+                if record:
+                    latest_date = str(record[0])  # The actual value is the first item in the tuple
+                    logging.info(f"Successfully extracted latest date: {latest_date}")
+
+    except Exception as e:
+        logging.error(f"Error getting latest date: {e}")
+
+    return latest_date

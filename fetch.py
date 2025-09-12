@@ -1,14 +1,13 @@
 import re
-from datetime import date,timedelta
 import json
 import imaplib
 import email
 import logging
 
-from db import record_to_db
+from db import record_to_db, get_latest_date
 from llama import get_info
 from email.header import decode_header
-from config_loader import email_id, email_pass, senders_config
+from config_loader import email_id, email_pass, senders_config, db_name, db_user, db_pass, db_host, db_port
 from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -83,9 +82,8 @@ def get_emails():
         return []
 
     imap.select("inbox")
-    # yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')
-    # search_criteria = get_search_criteria(senders_config, yesterday)
-    search_criteria = get_search_criteria(senders_config, None)
+    latest_date = get_latest_date(db_name, db_user, db_pass, db_host, db_port)
+    search_criteria = get_search_criteria(senders_config, latest_date)
     status, messages = imap.search(None, search_criteria)
 
     email_list = []

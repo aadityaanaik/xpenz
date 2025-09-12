@@ -34,7 +34,7 @@ sql_insert_merch_cat = config['QUERY_CONFIG']['INSERT_MERCH_CAT']
 sql_existing_merchants = config['QUERY_CONFIG']['SELECT_EXISTING_MERCH_CAT']
 sql_distinct_merchant_txn_date = config['QUERY_CONFIG']['SELECT_DISTINCT_MERCH_TXN_DATE']
 sql_distinct_merchant_txn = config['QUERY_CONFIG']['SELECT_DISTINCT_MERCH_TXN']
-
+sql_latest_date = config['QUERY_CONFIG']['SELECT_LATEST_DATE']
 
 print(f"Connecting to DB at {db_host}:{db_port} as {db_user}")
 print(f"LLaMA running at {llama_host}:{llama_port}")
