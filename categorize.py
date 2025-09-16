@@ -37,7 +37,7 @@ def fetch_merchants(conn, query):
 
 def get_data(merchant):
     if merchant[:3] == "ORC":
-        return {"original_merchant":merchant,"refined_merchant_name":"ORCA","category":"Travel"}
+        return {"original_merchant":merchant,"refined_merchant_name":"ORCA","category":"Transportation"}
     else:
         return get_category(merchant)
 
@@ -76,12 +76,6 @@ finally:
         logging.info(f"Categorizing merchant: '{merchant}'...")
         data = get_data(merchant)
         insert_category(conn, sql_insert_merch_cat, data)
-        # new_categories.append((data["original_merchant"], data["refined_merchant_name"], data["category"]))
-
-    # 5. Insert new categories into the database
-    # if new_categories:
-    #     insert_category(conn, sql_insert_merch_cat, data)
-    #     bulk_insert_categories(conn, new_categories)
 
     if conn:
         conn.close()
