@@ -9,12 +9,21 @@ from db import get_connection, insert_category
 from config_loader import db_name, db_user, db_pass, db_host, db_port, sql_existing_merchants, \
     sql_distinct_merchant_txn_date, sql_distinct_merchant_txn, sql_insert_merch_cat, merch_category_info
 
+def extract_json_string(text: str) -> str:
+    try:
+        start_index = text.find('{')
+        end_index = text.rfind('}')
+        if start_index != -1 and end_index != -1 and start_index < end_index:
+            return text[start_index: end_index + 1]
+    except (TypeError, AttributeError):
+        pass
+    return ""
 
 def get_category(merchant_to_categorize):
     prompt = merch_category_info.format(
         merchant=json.dumps(merchant_to_categorize)
     )
-    return json.loads(process_prompt(prompt))
+    return extract_json_string(json.loads(process_prompt(prompt)))
 
 def fetch_merchants(conn, query):
     with conn.cursor() as cur:
@@ -22,11 +31,6 @@ def fetch_merchants(conn, query):
         results = cur.fetchall()
         return {row[0] for row in results}  # Return a set for efficient comparison
 
-# def bulk_insert_categories(conn, new_categories):
-#     with conn.cursor() as cur:
-#         psycopg2.extras.execute_values(cur, sql_insert_merch_cat, new_categories)
-#     conn.commit()
-#     logging.info(f"Successfully inserted or updated {len(new_categories)} merchant categories.")
 
 def get_data(merchant):
     if merchant[:3] == "ORC":
@@ -68,6 +72,7 @@ finally:
     for merchant in merchants_to_categorize:
         logging.info(f"Categorizing merchant: '{merchant}'...")
         data = get_data(merchant)
+        print(data)
         insert_category(conn, sql_insert_merch_cat, data)
         # new_categories.append((data["original_merchant"], data["refined_merchant_name"], data["category"]))
 
