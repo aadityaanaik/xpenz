@@ -23,7 +23,10 @@ def get_category(merchant_to_categorize):
     prompt = merch_category_info.format(
         merchant=json.dumps(merchant_to_categorize)
     )
-    return extract_json_string(json.loads(process_prompt(prompt)))
+    rsp = process_prompt(prompt)
+    rsp_trim = extract_json_string(rsp)
+    rsp_json = json.loads(rsp_trim)
+    return rsp_json
 
 def fetch_merchants(conn, query):
     with conn.cursor() as cur:
@@ -72,7 +75,6 @@ finally:
     for merchant in merchants_to_categorize:
         logging.info(f"Categorizing merchant: '{merchant}'...")
         data = get_data(merchant)
-        print(data)
         insert_category(conn, sql_insert_merch_cat, data)
         # new_categories.append((data["original_merchant"], data["refined_merchant_name"], data["category"]))
 
