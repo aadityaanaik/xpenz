@@ -26,6 +26,22 @@ def get_connection(dbname, user, password, host, port):
         logging.error(f"Failed to connect to the database: {e}")
         raise
 
+def insert_category(conn, sql_insert_merch_cat, data):
+    with conn.cursor() as cur:
+        # Execute the SQL command with a tuple of values
+        merchant = data['original_merchant']
+        company = data['refined_merchant_name']
+        category = data['category']
+        cur.execute(sql_insert_merch_cat, (merchant, company, category))
+
+        # Check cur.rowcount to see if a row was actually inserted
+        if cur.rowcount > 0:
+            logging.info(f"Successfully inserted category for merchant: {merchant}")
+        else:
+            logging.info(f"Merchant '{merchant}' already exists. No new category inserted.")
+
+    conn.commit()
+
 def insert_transactions(record, dbname, user, password, host, port):
     conn = None
     try:
