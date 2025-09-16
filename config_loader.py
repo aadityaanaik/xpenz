@@ -20,10 +20,6 @@ db_port = config['DB_CONFIG']['DBPORT']
 llama_host = config['LLAMA_CONFIG']['LLAMA_HOST']
 llama_port = config['LLAMA_CONFIG']['LLAMA_PORT']
 
-# Access FILE_CONFIG
-email_file = config['FILE_CONFIG']['EMAIL_FILE']
-transactions_file = config['FILE_CONFIG']['TRANSACTIONS_FILE']
-
 # Access PROMPTS_CONFIG
 prompt_email_info = config['PROMPT_CONFIG']['EMAIL_INFO']
 merch_category_info = config['PROMPT_CONFIG']['MERCH_CATEGORY_INFO']

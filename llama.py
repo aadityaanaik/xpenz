@@ -32,8 +32,4 @@ def get_info(subject, body) -> str:
     email_body=body)
     return process_prompt(prompt)
 
-def get_category(merchants_to_categorize):
-    prompt = merch_category_info.format(
-        merchant_list_json=json.dumps(merchants_to_categorize)
-    )
-    return process_prompt(prompt)
+# print(get_category("{Trader Joe's #131, UBR* PENDING.UBER.CO, IC* INSTACART*161, USCIS I-730, DOORDASH WINGSTO}"))
