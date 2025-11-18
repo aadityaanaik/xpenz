@@ -123,10 +123,11 @@ You'll need to create a `config.json` file in the root directory. Copy the templ
     }
 }
 ```
-Configuration Breakdown
-EMAIL_CONFIG:
-* EMAIL/EMAIL_PASS: Your email login credentials. Use an App Password for security.
-* SENDER: This is the rule set. It tells the app which emails to look for. It maps a sender's email and subject line text to a specific card name (e.g., "Amex").
+# Configuration Breakdown
+
+*EMAIL_CONFIG:
+    * EMAIL/EMAIL_PASS: Your email login credentials. Use an App Password for security.
+    * SENDER: This is the rule set. It tells the app which emails to look for. It maps a sender's email and subject line text to a          specific card name (e.g., "Amex").
 
 * DB_CONFIG: Your PostgreSQL database connection details.
 
