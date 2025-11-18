@@ -131,18 +131,18 @@ Just run the main script, and it'll connect to your email, fetch new transaction
 ```Bash
 python main.py
 ```
-🤝 Want to Help Out?
+
+## 🤝 Want to Help Out?
 Contributions are totally welcome! If you have an idea or a fix, feel free to open an issue or send over a pull request.
+* Fork the Project
 
-Fork the Project
+* Create your Feature Branch (git checkout -b feature/AmazingFeature)
 
-Create your Feature Branch (git checkout -b feature/AmazingFeature)
+* Commit your Changes (git commit -m 'Add some AmazingFeature')
 
-Commit your Changes (git commit -m 'Add some AmazingFeature')
+* Push to the Branch (git push origin feature/AmazingFeature)
 
-Push to the Branch (git push origin feature/AmazingFeature)
+* Open a Pull Request
 
-Open a Pull Request
-
-📄 The Legal Stuff
+## 📄 The Legal Stuff
 This is shared under the MIT License. Check out the LICENSE file for all the details.
