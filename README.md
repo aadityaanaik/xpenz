@@ -1,5 +1,5 @@
 # xpenz
-
+![Alt Text](dashboard.png)
 xpenz is a handy Python tool for keeping track of your spending by automatically reading your email. It parses new transaction alerts, extracts the key details, saves them to a database, and even sorts them into categories for you. The best part? It uses a smart Large Language Model (LLM) to understand the emails and merchant names, so you don't have to do it all by hand!
 
 ## 🌟 What's Inside?
