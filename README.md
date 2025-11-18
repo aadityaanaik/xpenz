@@ -15,7 +15,18 @@ xpenz is a handy Python tool for keeping track of your spending by automatically
 ## 🛠️ How It's Put Together
 
 Here's a quick look at the main files and what they do:
-/ ├── dag/ # Orchestration files (e.g., for Airflow) ├── .gitignore # Git ignore file ├── LICENSE # MIT License ├── README.md # This file ├── config.json # Your configuration file (you'll create this) ├── categorize.py # Logic for categorizing merchants using the LLM ├── config_loader.py # Loads configuration from config.json ├── db.py # Database connection and query logic (PostgreSQL) ├── fetch.py # Connects to your email and fetches transaction emails ├── llama.py # Handles interaction with the LLM for extraction & categorization ├── main.py # Main entry point for the application └── requirements.txt # Python dependencies
+/
+├── dag/                  # Orchestration files (e.g., for Airflow)
+├── .gitignore            # Git ignore file
+├── LICENSE               # MIT License
+├── README.md             # This file
+├── categorize.py         # Logic for categorizing expenses
+├── config_loader.py      # Loads configuration from environment or files
+├── db.py                 # Database connection and query logic
+├── fetch.py              # Fetches transaction data from sources
+├── llama.py              # Handles interaction with the LLM for categorization
+├── main.py               # Main entry point for the application
+└── requirements.txt      # Python dependencies
 
 ---
 
@@ -132,6 +143,8 @@ Just run the main script, and it'll connect to your email, fetch new transaction
 python main.py
 ```
 
+---
+
 ## 🤝 Want to Help Out?
 Contributions are totally welcome! If you have an idea or a fix, feel free to open an issue or send over a pull request.
 * Fork the Project
@@ -143,6 +156,8 @@ Contributions are totally welcome! If you have an idea or a fix, feel free to op
 * Push to the Branch (git push origin feature/AmazingFeature)
 
 * Open a Pull Request
+
+---
 
 ## 📄 The Legal Stuff
 This is shared under the MIT License. Check out the LICENSE file for all the details.
