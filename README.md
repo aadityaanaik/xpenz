@@ -114,25 +114,23 @@ You'll need to create a `config.json` file in the root directory. Copy the templ
 ```
 Configuration Breakdown
 EMAIL_CONFIG:
+* EMAIL/EMAIL_PASS: Your email login credentials. Use an App Password for security.
+* SENDER: This is the rule set. It tells the app which emails to look for. It maps a sender's email and subject line text to a specific card name (e.g., "Amex").
 
-EMAIL/EMAIL_PASS: Your email login credentials. Use an App Password for security.
+* DB_CONFIG: Your PostgreSQL database connection details.
 
-SENDER: This is the rule set. It tells the app which emails to look for. It maps a sender's email and subject line text to a specific card name (e.g., "Amex").
+* LLAMA_CONFIG: The host and port where your Llama (Ollama) instance is running.
 
-DB_CONFIG: Your PostgreSQL database connection details.
+* QUERY_CONFIG: The exact SQL queries the app uses. You probably don't need to change these unless you change the database schema.
 
-LLAMA_CONFIG: The host and port where your Llama (Ollama) instance is running.
-
-QUERY_CONFIG: The exact SQL queries the app uses. You probably don't need to change these unless you change the database schema.
-
-PROMPT_CONFIG: The powerful prompts that are sent to the LLM to extract data and categorize merchants.
+* PROMPT_CONFIG: The powerful prompts that are sent to the LLM to extract data and categorize merchants.
 
 4. Run It!
 Just run the main script, and it'll connect to your email, fetch new transactions, and sort them into your database:
 
-Bash
-
+```Bash
 python main.py
+```
 🤝 Want to Help Out?
 Contributions are totally welcome! If you have an idea or a fix, feel free to open an issue or send over a pull request.
 
