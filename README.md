@@ -15,6 +15,7 @@ xpenz is a handy Python tool for keeping track of your spending by automatically
 ## 🛠️ How It's Put Together
 
 Here's a quick look at the main files and what they do:
+```
 /
 ├── dag/                  # Orchestration files (e.g., for Airflow)
 ├── .gitignore            # Git ignore file
@@ -27,7 +28,7 @@ Here's a quick look at the main files and what they do:
 ├── llama.py              # Handles interaction with the LLM for categorization
 ├── main.py               # Main entry point for the application
 └── requirements.txt      # Python dependencies
-
+```
 ---
 
 ## 🚀 Let's Get This Going!
