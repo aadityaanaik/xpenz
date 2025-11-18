@@ -123,7 +123,7 @@ You'll need to create a `config.json` file in the root directory. Copy the templ
     }
 }
 ```
-### Configuration Breakdown
+#### Configuration Breakdown
 
 * EMAIL_CONFIG:
 EMAIL/EMAIL_PASS: Your email login credentials. Use an App Password for security.
@@ -137,7 +137,7 @@ SENDER: This is the rule set. It tells the app which emails to look for. It maps
 
 * PROMPT_CONFIG: The powerful prompts that are sent to the LLM to extract data and categorize merchants.
 
-4. Run It!
+### 4. Run It!
 Just run the main script, and it'll connect to your email, fetch new transactions, and sort them into your database:
 
 ```Bash
