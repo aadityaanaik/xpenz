@@ -1,91 +1,130 @@
 # xpenz
-![Alt Text](dashboard.png)
-xpenz is a handy Python tool for keeping track of your spending by automatically reading your email. It parses new transaction alerts, extracts the key details, saves them to a database, and even sorts them into categories for you. The best part? It uses a smart Large Language Model (LLM) to understand the emails and merchant names, so you don't have to do it all by hand!
+![Dashboard](dashboard.png)
 
-## 🌟 What's Inside?
+**xpenz** is a Python-based personal finance automation tool that reads your bank transaction alert emails, extracts key details using a local LLM (via [Ollama](https://ollama.com/)), stores them in a PostgreSQL database, and categorizes merchants — all automatically.
 
-* **Pulls Transactions from Emails:** It securely connects to your email account (via IMAP), finds transaction alerts from banks like Chase, Amex, Citi, and Capital One, and parses them.
-* **Smart Extraction (with an LLM!):** This is the core magic. It uses an LLM (via `llama.py`) with specific prompts to read the email subject and body and accurately extract the **amount**, **merchant**, and **transaction type (debit/credit)**.
-* **Smart Categorization (with an LLM!):** After extracting a "messy" merchant name (e.g., "AMZN Mktp US"), it uses the LLM again to refine it to a clean name ("Amazon") and assign a clear category like "Shopping."
-* **Saves Everything:** It stores all your transactions and categorized merchants in a **PostgreSQL database**.
-* **Ready for Automation:** There's a `dag` folder, which means it's all set up to be automated with something like Airflow if you're into that.
+No manual data entry. No paid services. Runs entirely on your own infrastructure.
 
 ---
 
-## 🛠️ How It's Put Together
+## How It Works
 
-Here's a quick look at the main files and what they do:
 ```
-/
-├── dag/                  # Orchestration files (e.g., for Airflow)
-├── .gitignore            # Git ignore file
-├── LICENSE               # MIT License
-├── README.md             # This file
-├── categorize.py         # Logic for categorizing expenses
-├── config_loader.py      # Loads configuration from environment or files
-├── db.py                 # Database connection and query logic
-├── fetch.py              # Fetches transaction data from sources
-├── llama.py              # Handles interaction with the LLM for categorization
-├── main.py               # Main entry point for the application
-└── requirements.txt      # Python dependencies
+Gmail (IMAP)
+    │
+    ▼
+fetch.py  ──► Parses email subject + body
+    │
+    ▼
+llama.py  ──► Sends to Ollama (llama3) → returns { amount, merchant, type }
+    │
+    ▼
+db.py     ──► Inserts into PostgreSQL `txn` table
+    │
+    ▼
+categorize.py ──► Finds uncategorized merchants in `txn`
+    │
+    ▼
+llama.py  ──► Sends merchant name → returns { refined_name, category }
+    │
+    ▼
+db.py     ──► Inserts into PostgreSQL `merch_cat` table
 ```
+
+The two pipelines run on a schedule via Apache Airflow DAGs:
+- **ETL DAG** (`xpenz_etl_bash_dag`): runs `main.py` daily at **midnight**
+- **Categorize DAG** (`xpenz_categorize_dag`): runs `categorize.py` daily at **12:30 AM**
+
 ---
 
-## 🚀 Let's Get This Going!
+## Project Structure
 
-Want to get this running on your own machine? Just follow these steps.
+```
+xpenz/
+├── dag/
+│   ├── xpenz_etl_dag.py          # Airflow DAG: fetch + store transactions
+│   └── xpenz_categorize_dag.py   # Airflow DAG: categorize merchants
+├── main.py                        # Entry point: orchestrates fetch → store
+├── fetch.py                       # Gmail IMAP client + email parser + LLM caller
+├── llama.py                       # HTTP client for Ollama API
+├── categorize.py                  # Merchant categorization pipeline
+├── db.py                          # PostgreSQL connection + query helpers
+├── config_loader.py               # Loads and exposes all config from config.json
+├── requirements.txt               # Python dependencies
+├── config.json                    # Your credentials + config (gitignored)
+└── README.md
+```
 
-### 1. What You'll Need
+---
 
-* Python (version 3.9 or newer)
-* A running **PostgreSQL database**
-* A running **Llama instance** (like [Ollama](https://ollama.com/)) accessible on your network.
-* A **Google App Password** for your email (if using Gmail). [How to create one](https://support.google.com/accounts/answer/185833).
+## Database Schema
 
-### 2. How to Install
+### `txn` — Transaction records
 
-1.  Grab the code:
-    ```sh
-    git clone [https://github.com/aadityaanaik/xpenz.git](https://github.com/aadityaanaik/xpenz.git)
-    cd xpenz
-    ```
+| Column     | Type      | Description                        |
+|------------|-----------|------------------------------------|
+| `datetime` | timestamp | Transaction date and time          |
+| `card`     | text      | Card name (e.g. "Chase", "Amex")   |
+| `merchant` | text      | Raw merchant name from email       |
+| `amount`   | numeric   | Transaction amount                 |
+| `type`     | text      | `debit` or `credit`                |
 
-2.  Install all the bits and pieces:
-    We really suggest using a virtual environment to keep things tidy.
+Duplicate transactions are ignored via a `unique_txn_record` constraint.
 
-    ```sh
-    # Create a virtual environment
-    python3 -m venv venv
+### `merch_cat` — Merchant categories
 
-    # Activate the virtual environment
-    # On macOS/Linux:
-    source venv/bin/activate
-    # On Windows:
-    .\venv\Scripts\activate
+| Column     | Type | Description                              |
+|------------|------|------------------------------------------|
+| `merchant` | text | Raw merchant name (primary key)          |
+| `company`  | text | Refined company name (e.g. "Amazon")     |
+| `category` | text | Spending category (e.g. "Shopping")      |
 
-    # Install the required packages
-    pip install -r requirements.txt
-    ```
+---
 
-### 3. Setting It Up
+## Prerequisites
 
-You'll need to create a `config.json` file in the root directory. Copy the template below and fill in your own details.
+- Python 3.9+
+- A running **PostgreSQL** instance
+- A running **Ollama** instance with the `llama3` model pulled
+  ```sh
+  ollama pull llama3
+  ```
+- A **Gmail App Password** — [how to create one](https://support.google.com/accounts/answer/185833)
+- (Optional) **Apache Airflow** for scheduled automation
 
-**`config.json` Template:**
+---
+
+## Setup
+
+### 1. Clone and install
+
+```sh
+git clone https://github.com/aadityaanaik/xpenz.git
+cd xpenz
+
+python3 -m venv venv
+source venv/bin/activate        # macOS/Linux
+# .\venv\Scripts\activate       # Windows
+
+pip install -r requirements.txt
+```
+
+### 2. Create `config.json`
+
+Create a `config.json` file in the project root using the template below:
 
 ```json
 {
-    "EMAIL_CONFIG":
-    {
+    "EMAIL_CONFIG": {
         "EMAIL": "your-email@gmail.com",
         "EMAIL_PASS": "your-google-app-password",
         "SENDER": {
             "capitalone@notification.capitalone.com": {
-              "card":"Capital One",
+                "card": "Capital One",
                 "subject": "A new transaction was charged to your account"
             },
             "alerts@info6.citi.com": {
-                "card":"Citi",
+                "card": "Citi",
                 "subject": "transaction was made on your Costco Anywhere account"
             },
             "americanexpress@welcome.americanexpress.com": {
@@ -98,8 +137,7 @@ You'll need to create a `config.json` file in the root directory. Copy the templ
             }
         }
     },
-    "DB_CONFIG":
-    {
+    "DB_CONFIG": {
         "DBNAME": "xpenz",
         "DBUSER": "your_db_user",
         "DBPASS": "your_db_password",
@@ -111,55 +149,100 @@ You'll need to create a `config.json` file in the root directory. Copy the templ
         "LLAMA_HOST": "your_llama_host_ip"
     },
     "QUERY_CONFIG": {
-        "INSERT_TXN": "INSERT INTO txn (datetime, card, merchant, amount, type)\n    VALUES (%(datetime)s, %(card)s, %(merchant)s, %(amount)s, %(type)s)\n    ON CONFLICT ON CONSTRAINT unique_txn_record DO NOTHING",
-        "INSERT_MERCH_CAT": "INSERT INTO merch_cat (merchant, company, category)\n            VALUES (%s, %s, %s) ON CONFLICT (merchant) DO NOTHING;",
+        "INSERT_TXN": "INSERT INTO txn (datetime, card, merchant, amount, type) VALUES (%(datetime)s, %(card)s, %(merchant)s, %(amount)s, %(type)s) ON CONFLICT ON CONSTRAINT unique_txn_record DO NOTHING",
+        "INSERT_MERCH_CAT": "INSERT INTO merch_cat (merchant, company, category) VALUES (%s, %s, %s) ON CONFLICT (merchant) DO NOTHING;",
         "SELECT_DISTINCT_MERCH_TXN": "SELECT DISTINCT merchant FROM txn",
         "SELECT_DISTINCT_MERCH_TXN_DATE": "SELECT DISTINCT merchant FROM txn WHERE datetime >= {since_date}",
         "SELECT_EXISTING_MERCH_CAT": "SELECT distinct merchant FROM merch_cat",
         "SELECT_LATEST_DATE": "SELECT DATE(MAX(datetime)) FROM txn"
     },
     "PROMPT_CONFIG": {
-        "EMAIL_INFO": "You are an automated financial data extraction API. Your sole purpose is to analyze the subject and body of a financial email and extract key details into a structured JSON format... (prompt text) ...[SUBJECT]: {email_subject}\\\\n[BODY]: {email_body}\\\\n---END DATA---",
-        "MERCH_CATEGORY_INFO": "Return ONLY one JSON object with structure ... (prompt text) ... Now, process this merchant: {merchant}"
+        "EMAIL_INFO": "You are an automated financial data extraction API. Your sole purpose is to analyze the subject and body of a financial email and extract key details into a structured JSON format... [SUBJECT]: {email_subject}\\n[BODY]: {email_body}\\n---END DATA---",
+        "MERCH_CATEGORY_INFO": "Return ONLY one JSON object with structure ... Now, process this merchant: {merchant}"
     }
 }
 ```
-#### Configuration Breakdown
 
-* EMAIL_CONFIG:
-EMAIL/EMAIL_PASS: Your email login credentials. Use an App Password for security.
-SENDER: This is the rule set. It tells the app which emails to look for. It maps a sender's email and subject line text to a          specific card name (e.g., "Amex").
+### Configuration Reference
 
-* DB_CONFIG: Your PostgreSQL database connection details.
+| Section | Key | Description |
+|---|---|---|
+| `EMAIL_CONFIG` | `EMAIL` | Your Gmail address |
+| `EMAIL_CONFIG` | `EMAIL_PASS` | Google App Password (not your regular password) |
+| `EMAIL_CONFIG` | `SENDER` | Map of sender email → `{ card, subject }`. The `subject` value is a substring to match against email subjects. Add or remove entries to support different banks. |
+| `DB_CONFIG` | `DBNAME/USER/PASS/HOST/PORT` | PostgreSQL connection details |
+| `LLAMA_CONFIG` | `LLAMA_HOST/PORT` | Host and port of your running Ollama instance (default port: `11434`) |
+| `QUERY_CONFIG` | — | SQL queries used by the app. Only change these if you modify the database schema. |
+| `PROMPT_CONFIG` | `EMAIL_INFO` | Prompt sent to the LLM to extract `amount`, `merchant`, and `type` from an email |
+| `PROMPT_CONFIG` | `MERCH_CATEGORY_INFO` | Prompt sent to the LLM to refine a raw merchant name and assign a spending category |
 
-* LLAMA_CONFIG: The host and port where your Llama (Ollama) instance is running.
+---
 
-* QUERY_CONFIG: The exact SQL queries the app uses. You probably don't need to change these unless you change the database schema.
+## Running
 
-* PROMPT_CONFIG: The powerful prompts that are sent to the LLM to extract data and categorize merchants.
+### Manually
 
-### 4. Run It!
-Just run the main script, and it'll connect to your email, fetch new transactions, and sort them into your database:
-
-```Bash
+Fetch new transactions and store them:
+```sh
 python main.py
 ```
 
+Categorize any uncategorized merchants:
+```sh
+python categorize.py
+```
+
+### With Apache Airflow
+
+Copy the DAG files to your Airflow DAGs folder:
+```sh
+cp dag/*.py $AIRFLOW_HOME/dags/
+```
+
+Update the `bash_command` paths in both DAG files to match your environment:
+```python
+bash_command='cd /path/to/xpenz && /path/to/python3 main.py'
+```
+
+The two DAGs will then appear in the Airflow UI:
+
+| DAG ID | Schedule | Task |
+|---|---|---|
+| `xpenz_etl_bash_dag` | `0 0 * * *` (midnight) | Runs `main.py` |
+| `xpenz_categorize_dag` | `30 0 * * *` (12:30 AM) | Runs `categorize.py` |
+
+Both DAGs have 1 automatic retry with a 5-minute delay on failure.
+
 ---
 
-## 🤝 Want to Help Out?
-Contributions are totally welcome! If you have an idea or a fix, feel free to open an issue or send over a pull request.
-* Fork the Project
+## Adding a New Bank
 
-* Create your Feature Branch (git checkout -b feature/AmazingFeature)
+To add support for a new bank's transaction emails:
 
-* Commit your Changes (git commit -m 'Add some AmazingFeature')
-
-* Push to the Branch (git push origin feature/AmazingFeature)
-
-* Open a Pull Request
+1. Find the sender email address and a unique substring from the subject line of their transaction alerts.
+2. Add an entry to `SENDER` in `config.json`:
+   ```json
+   "alerts@yourbank.com": {
+       "card": "Your Bank",
+       "subject": "unique subject substring"
+   }
+   ```
+3. If the email format is unusual, you may need to tune the `EMAIL_INFO` prompt in `PROMPT_CONFIG` to help the LLM extract data correctly.
 
 ---
 
-## 📄 The Legal Stuff
-This is shared under the MIT License. Check out the LICENSE file for all the details.
+## Contributing
+
+Contributions are welcome. To contribute:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'Add your feature'`
+4. Push to the branch: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
