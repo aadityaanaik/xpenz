@@ -1,82 +1,71 @@
 import json
-
 import psycopg2
-import psycopg2.extras
 import logging
-from datetime import date, timedelta
-from llama import process_prompt
-from db import get_connection, insert_category
-from config_loader import db_name, db_user, db_pass, db_host, db_port, sql_existing_merchants, \
-    sql_distinct_merchant_txn_date, sql_distinct_merchant_txn, sql_insert_merch_cat, merch_category_info
-
-def extract_json_string(text: str) -> str:
-    try:
-        start_index = text.find('{')
-        end_index = text.rfind('}')
-        if start_index != -1 and end_index != -1 and start_index < end_index:
-            return text[start_index: end_index + 1]
-    except (TypeError, AttributeError):
-        pass
-    return ""
-
-def get_category(merchant_to_categorize):
-    prompt = merch_category_info.format(
-        merchant=json.dumps(merchant_to_categorize)
-    )
-    rsp = process_prompt(prompt)
-    rsp_trim = extract_json_string(rsp)
-    rsp_json = json.loads(rsp_trim)
-    return rsp_json
-
-def fetch_merchants(conn, query):
-    with conn.cursor() as cur:
-        cur.execute(query)
-        results = cur.fetchall()
-        return {row[0] for row in results}  # Return a set for efficient comparison
-
-
-def get_data(merchant):
-    if merchant[:3] == "ORC":
-        return {"original_merchant":merchant,"refined_merchant_name":"ORCA","category":"Transportation"}
-    else:
-        return get_category(merchant)
+from llama import get_categories_batch
+from db import get_connection, insert_category, fetch_merchants, SQL_DISTINCT_MERCHANTS, SQL_EXISTING_MERCH_CAT
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-conn = None
-try:
-    conn = get_connection(db_name,db_user,db_pass,db_host,db_port)
-except psycopg2.Error as e:
-    logging.error(f"Database error: {e}")
-except Exception as e:
-    logging.error(f"An unexpected error occurred: {e}")
 
-finally:
+ORC_OVERRIDE = {"refined_merchant_name": "ORCA", "category": "Transportation"}
 
-    recent_merchants = []
-    since_date = date.today() - timedelta(days=1)
-    # recent_merchants = fetch_merchants(conn, sql_distinct_merchant_txn_date.format(since_date = since_date))
-    recent_merchants.extend(fetch_merchants(conn, sql_distinct_merchant_txn))
-    logging.info(f"Found {len(recent_merchants)} unique merchants.")
 
-    categorized_merchants=[]
-    categorized_merchants.extend(fetch_merchants(conn, sql_existing_merchants))
-    logging.info(f"Found {len(categorized_merchants)} merchants that are already categorized.")
+def get_data_batch(merchants: list) -> list:
+    overrides = [
+        {**ORC_OVERRIDE, "original_merchant": m}
+        for m in merchants if m[:3] == "ORC"
+    ]
+    to_llm = [m for m in merchants if m[:3] != "ORC"]
 
-    merchants_to_categorize = list(set(recent_merchants) - set(categorized_merchants))
+    results = overrides
 
-    if not merchants_to_categorize:
-        logging.info("No new merchants to categorize. All up to date!")
-        exit(0)
+    if to_llm:
+        for attempt in range(1, 3):
+            try:
+                results = results + get_categories_batch(to_llm)
+                break
+            except (json.JSONDecodeError, ValueError) as e:
+                logging.warning(f"Batch categorization failed (attempt {attempt}/2): {e}")
+        else:
+            logging.error("Failed to categorize merchants after 2 attempts. Skipping batch.")
 
-    logging.info(f"Found {len(merchants_to_categorize)} new merchants to categorize.")
+    return results
 
-    # 4. Get categories from Llama and create a map
-    new_categories = []
-    for merchant in merchants_to_categorize:
-        logging.info(f"Categorizing merchant: '{merchant}'...")
-        data = get_data(merchant)
-        insert_category(conn, sql_insert_merch_cat, data)
 
-    if conn:
-        conn.close()
-        logging.info("Database connection closed.")
+def main():
+    conn = None
+    try:
+        conn = get_connection()
+
+        all_merchants = fetch_merchants(conn, SQL_DISTINCT_MERCHANTS)
+        logging.info(f"Found {len(all_merchants)} unique merchants.")
+
+        categorized = fetch_merchants(conn, SQL_EXISTING_MERCH_CAT)
+        logging.info(f"Found {len(categorized)} already categorized.")
+
+        to_categorize = list(all_merchants - categorized)
+
+        if not to_categorize:
+            logging.info("No new merchants to categorize. All up to date!")
+            return
+
+        logging.info(f"Categorizing {len(to_categorize)} new merchants in one batch...")
+        results = get_data_batch(to_categorize)
+
+        for data in results:
+            try:
+                insert_category(conn, data)
+            except Exception as e:
+                logging.error(f"Failed to insert category for '{data.get('original_merchant')}': {e}")
+
+    except psycopg2.Error as e:
+        logging.error(f"Database error: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+    finally:
+        if conn:
+            conn.close()
+            logging.info("Database connection closed.")
+
+
+if __name__ == "__main__":
+    main()

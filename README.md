@@ -148,17 +148,9 @@ Create a `config.json` file in the project root using the template below:
         "LLAMA_PORT": "11434",
         "LLAMA_HOST": "your_llama_host_ip"
     },
-    "QUERY_CONFIG": {
-        "INSERT_TXN": "INSERT INTO txn (datetime, card, merchant, amount, type) VALUES (%(datetime)s, %(card)s, %(merchant)s, %(amount)s, %(type)s) ON CONFLICT ON CONSTRAINT unique_txn_record DO NOTHING",
-        "INSERT_MERCH_CAT": "INSERT INTO merch_cat (merchant, company, category) VALUES (%s, %s, %s) ON CONFLICT (merchant) DO NOTHING;",
-        "SELECT_DISTINCT_MERCH_TXN": "SELECT DISTINCT merchant FROM txn",
-        "SELECT_DISTINCT_MERCH_TXN_DATE": "SELECT DISTINCT merchant FROM txn WHERE datetime >= {since_date}",
-        "SELECT_EXISTING_MERCH_CAT": "SELECT distinct merchant FROM merch_cat",
-        "SELECT_LATEST_DATE": "SELECT DATE(MAX(datetime)) FROM txn"
-    },
     "PROMPT_CONFIG": {
         "EMAIL_INFO": "You are an automated financial data extraction API. Your sole purpose is to analyze the subject and body of a financial email and extract key details into a structured JSON format... [SUBJECT]: {email_subject}\\n[BODY]: {email_body}\\n---END DATA---",
-        "MERCH_CATEGORY_INFO": "Return ONLY one JSON object with structure ... Now, process this merchant: {merchant}"
+        "MERCH_CATEGORY_INFO": "Return ONLY a JSON array of objects, one per merchant. Each object must have keys: original_merchant, refined_merchant_name, category. Now process these merchants: {merchants}"
     }
 }
 ```
@@ -172,9 +164,8 @@ Create a `config.json` file in the project root using the template below:
 | `EMAIL_CONFIG` | `SENDER` | Map of sender email → `{ card, subject }`. The `subject` value is a substring to match against email subjects. Add or remove entries to support different banks. |
 | `DB_CONFIG` | `DBNAME/USER/PASS/HOST/PORT` | PostgreSQL connection details |
 | `LLAMA_CONFIG` | `LLAMA_HOST/PORT` | Host and port of your running Ollama instance (default port: `11434`) |
-| `QUERY_CONFIG` | — | SQL queries used by the app. Only change these if you modify the database schema. |
-| `PROMPT_CONFIG` | `EMAIL_INFO` | Prompt sent to the LLM to extract `amount`, `merchant`, and `type` from an email |
-| `PROMPT_CONFIG` | `MERCH_CATEGORY_INFO` | Prompt sent to the LLM to refine a raw merchant name and assign a spending category |
+| `PROMPT_CONFIG` | `EMAIL_INFO` | Prompt sent to the LLM to extract `amount`, `merchant`, and `type` from an email. Must use `{email_subject}` and `{email_body}` placeholders. |
+| `PROMPT_CONFIG` | `MERCH_CATEGORY_INFO` | Prompt sent to the LLM with a **JSON array** of merchant names (`{merchants}` placeholder). Must return a JSON array of objects with keys: `original_merchant`, `refined_merchant_name`, `category`. |
 
 ---
 

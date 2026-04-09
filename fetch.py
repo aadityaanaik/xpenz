@@ -4,37 +4,54 @@ import imaplib
 import email
 import logging
 
-from db import record_to_db, get_latest_date
-from datetime import date, timedelta
+from db import get_connection, insert_transaction, get_latest_date
 from llama import get_info
 from email.header import decode_header
-from config_loader import email_id, email_pass, senders_config, db_name, db_user, db_pass, db_host, db_port
+from config_loader import email_id, email_pass, senders_config
 from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def save_file(path,data):
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+
+def _parse_with_retry(subject, body, retries=2):
+    for attempt in range(1, retries + 1):
+        try:
+            return json.loads(get_info(subject, body))
+        except (json.JSONDecodeError, ValueError) as e:
+            logging.warning(f"LLM returned invalid JSON (attempt {attempt}/{retries}): {e}")
+    return None
+
 
 def email_to_record(emails):
-    for email in emails:
-        body = email["body"]
-        subject = email["subject"]
-        sender = re.search(r'<([^>]+)>', email["sender"]).group(1).lower()
-        logging.info(f"Processing email via LLAMA: {email}")
-        item=json.loads(get_info(subject ,body))
-        logging.info("Email processed successfully!")
+    if not emails:
+        return 0
 
-        item['datetime'] = email["timestamp"]
-        item['card'] = senders_config[sender]['card']
-        print(item)
-        try:
-            record_to_db(item)
-        except Exception as e:
-            logging.error(e)
-            return 1
+    conn = None
+    try:
+        conn = get_connection()
+        for txn_email in emails:
+            body = txn_email["body"]
+            subject = txn_email["subject"]
+            sender = re.search(r'<([^>]+)>', txn_email["sender"]).group(1).lower()
+            logging.info(f"Processing email via LLAMA: subject='{subject}' sender='{sender}'")
+
+            item = _parse_with_retry(subject, body)
+            if item is None:
+                logging.error(f"Skipping email from {sender} — could not parse LLM response.")
+                continue
+
+            item['datetime'] = txn_email["timestamp"]
+            item['card'] = senders_config[sender]['card']
+            try:
+                insert_transaction(conn, item)
+            except Exception as e:
+                logging.error(f"Failed to insert transaction: {e}")
+    finally:
+        if conn:
+            conn.close()
+            logging.info("Database connection closed.")
     return 0
+
 
 def clean(text):
     """Decode and clean header values."""
@@ -55,7 +72,7 @@ def get_search_criteria(senders_config, since_date):
     ]
 
     if not pair_criteria:
-        return ""  # No valid criteria to build a query from
+        return ""
 
     if len(pair_criteria) == 1:
         combined_criteria = pair_criteria[0]
@@ -64,12 +81,12 @@ def get_search_criteria(senders_config, since_date):
         for criterion in reversed(pair_criteria[:-1]):
             combined_criteria = f'(OR {criterion} {combined_criteria})'
 
-    # The final query combines the sender/subject logic with the date
     final_query_parts = [combined_criteria]
     if since_date:
         final_query_parts.append(f'SINCE {since_date}')
 
     return ' '.join(final_query_parts)
+
 
 def get_emails():
     logging.info("Connecting to Gmail IMAP server...")
@@ -83,17 +100,16 @@ def get_emails():
         return []
 
     imap.select("inbox")
-    latest_date = get_latest_date(db_name, db_user, db_pass, db_host, db_port)
-    # yesterday = (date.today()- timedelta(days=1)).strftime('%d-%b-%Y')
-    logging.error(f"Latest Date: {latest_date}")
+    latest_date = get_latest_date()
+    logging.info(f"Latest Date: {latest_date}")
     search_criteria = get_search_criteria(senders_config, latest_date)
     status, messages = imap.search(None, search_criteria)
 
-    email_list = []
     if status != "OK":
         logging.warning("No messages found.")
         return []
 
+    email_list = []
     for num in messages[0].split():
         status, msg_data = imap.fetch(num, "(RFC822)")
         if status != "OK":
@@ -143,5 +159,4 @@ def get_emails():
 
     imap.logout()
     logging.info(f"Fetched {len(email_list)} emails.")
-
     return email_list
